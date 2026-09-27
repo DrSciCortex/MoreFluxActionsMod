@@ -95,7 +95,7 @@ async def build_console(f: Flux, user, actions):
     ahead = _rotate(yaw, (0.0, hy - 0.15, 0.8))
     panel = await f.slot("Root", CONSOLE, position=tuple(u + a for u, a in zip(upos, ahead)), rotation=yaw,
                          scale=(0.001, 0.001, 0.001))
-    await f.add(panel, FE + "UIX.Canvas", Size=primitives.Float2(x=760.0, y=520.0))
+    await f.add(panel, FE + "UIX.Canvas", Size=primitives.Float2(x=760.0, y=640.0))
     await f.add(panel, FE + "Grabbable")
     bg = await f.slot(panel, "Background")
     await f.add(bg, FE + "UIX.RectTransform")
@@ -109,7 +109,7 @@ async def build_console(f: Flux, user, actions):
                 VerticalAlign="Middle", Color=primitives.ColorX(r=1.0, g=0.18, b=0.62, a=1.0, profile="sRGB"))
 
     body = await f.slot(panel, "Log")
-    await f.add(body, FE + "UIX.RectTransform", OffsetMin=primitives.Float2(x=16.0, y=12.0),
+    await f.add(body, FE + "UIX.RectTransform", OffsetMin=primitives.Float2(x=16.0, y=132.0),
                 OffsetMax=primitives.Float2(x=-16.0, y=-56.0))
     text = await f.add(body, FE + "UIX.Text", Content="Waiting for a FluxAction: press a bound button.",
                        Size=20.0, HorizontalAutoSize=False, VerticalAutoSize=False, HorizontalAlign="Left",
@@ -160,7 +160,113 @@ async def build_console(f: Flux, user, actions):
         await f.wire(set_pressed, **{_next(set_pressed): append})
         await f.wire(rx, OnTriggered=set_name)
         print(f"  console: FluxAction{n} ", end="\r", flush=True)
-    print(f"console: panel ahead of you, {len(actions)} receivers under {user.name.value}")
+    await build_simulator(f, panel, user)
+    print(f"console: panel ahead of you, {len(actions)} receivers under {user.name.value}, and a simulator")
+
+
+SIMULATOR_PRESETS = (1, 2, 36, 37, 38, 39, 40, 41)   # the ones the CyberFinger defaults bind
+
+
+async def build_simulator(f: Flux, panel, user):
+    """The console's bottom rows: pick a FluxAction (presets, or - and +), and hold Fire. Fire fires what the mod
+    fires for a real button, where it fires it (your user root, inactive slots skipped): FluxActionN.Pressed and
+    FluxActionN(true) on press, FluxActionN.Released and FluxActionN(false) on release. So whatever a rig does
+    downstream can be checked without the glove or its gestures in the loop."""
+    white = primitives.ColorX(r=0.92, g=0.92, b=0.92, a=1.0, profile="sRGB")
+    key = primitives.ColorX(r=0.18, g=0.18, b=0.24, a=1.0, profile="sRGB")
+    fire_tint = primitives.ColorX(r=0.55, g=0.08, b=0.32, a=1.0, profile="sRGB")
+    sim = await f.slot(panel, "Simulator")
+    await f.add(sim, FE + "UIX.RectTransform")
+    corner = primitives.Float2(x=0.0, y=0.0)
+
+    async def label(parent, text, size=20.0):
+        t = await f.slot(parent, "Label")
+        await f.add(t, FE + "UIX.RectTransform")
+        return await f.add(t, FE + "UIX.Text", Content=text, Size=size, HorizontalAutoSize=False,
+                           VerticalAutoSize=False, HorizontalAlign="Center", VerticalAlign="Middle", Color=white)
+
+    async def box(name, x0, y0, x1, y1):
+        b = await f.slot(sim, name)
+        await f.add(b, FE + "UIX.RectTransform", AnchorMin=corner, AnchorMax=corner,
+                    OffsetMin=primitives.Float2(x=x0, y=y0), OffsetMax=primitives.Float2(x=x1, y=y1))
+        return b
+
+    async def button(name, text, x0, y0, x1, y1, tint=key):
+        b = await box(name, x0, y0, x1, y1)
+        await f.add(b, FE + "UIX.Image", Tint=tint)
+        btn = await f.add(b, FE + "UIX.Button")
+        await label(b, text)
+        ref = await f.add(b, FE + f"ProtoFlux.GlobalReference<{FE}IButton>")
+        await f.wire(ref, Reference=btn)
+        events = await f.add(b, PF + "FrooxEngine.Interaction.ButtonEvents")
+        return await f.wire(events, Button=ref)
+
+    # The chosen action: a field, its label, and the tags built from it.
+    flux = await f.slot(sim, "Flux")
+    chosen = await f.add(flux, FE + "ValueField<int>", Value=SIMULATOR_PRESETS[2])
+    chosen_ref = await f.add(flux, FE + f"ProtoFlux.GlobalReference<{FE}IValue<int>>")
+    await f.wire(chosen_ref, Reference=chosen.member("Value"))
+    n = await f.add(flux, "[ProtoFluxBindings]FrooxEngine.FrooxEngine.ProtoFlux.CoreNodes.ValueSource<int>")
+    await f.wire(n, Source=chosen_ref)
+
+    async def concat(a, b):
+        node = await f.add(flux, PF + "Strings.ConcatenateString")
+        return await f.wire(node, A=a, B=b)
+
+    number = await f.add(flux, PF + "ParsingFormatting.ToString_Int")
+    await f.wire(number, **{_member_of(number, "V", "Value", "Input"): n})
+    tag = await concat(await f.const(flux, STR, "FluxAction"), number)
+    pressed_tag = await concat(tag, await f.const(flux, STR, ".Pressed"))
+    released_tag = await concat(tag, await f.const(flux, STR, ".Released"))
+
+    shown = await box("Chosen", 86.0, 12.0, 316.0, 62.0)
+    shown_text = await label(shown, f"FluxAction{SIMULATOR_PRESETS[2]}", size=24.0)
+    shown_ref = await f.add(flux, FE + f"ProtoFlux.GlobalReference<{FE}IValue<string>>")
+    await f.wire(shown_ref, Reference=shown_text.member("Content"))
+    shown_src = await f.add(flux, "[ProtoFluxBindings]FrooxEngine.FrooxEngine.ProtoFlux.CoreNodes.ObjectValueSource<string>")
+    await f.wire(shown_src, Source=shown_ref)
+    relabel = await f.add(flux, PF + f"ObjectWrite<{FEC},string>")
+    await f.wire(relabel, Variable=shown_src, Value=tag)
+
+    async def choose(events, value_node):
+        write = await f.add(flux, PF + f"ValueWrite<{FEC},int>")
+        await f.wire(write, Variable=n, Value=value_node, **{_next(write): relabel})
+        await f.wire(events, Pressed=write)
+
+    # Row 1: presets.
+    for i, preset in enumerate(SIMULATOR_PRESETS):
+        x0 = 16.0 + i * 80.0
+        events = await button(f"Preset {preset}", str(preset), x0, 70.0, x0 + 70.0, 120.0)
+        await choose(events, await f.const(flux, "int", preset))
+
+    # Row 2: -, the chosen action, +, Fire.
+    for text, delta, x0 in (("-", -1, 16.0), ("+", 1, 326.0)):
+        events = await button(f"Step {text}", text, x0, 12.0, x0 + 60.0, 62.0)
+        step = await f.add(flux, PF + "Operators.ValueAdd<int>")
+        await f.wire(step, A=n, B=await f.const(flux, "int", delta))
+        clamp = await f.add(flux, PF + "Math.ValueClamp<int>")
+        await f.wire(clamp, **{_member_of(clamp, "Value", "V", "Input"): step,
+                               _member_of(clamp, "Min"): await f.const(flux, "int", 1),
+                               _member_of(clamp, "Max"): await f.const(flux, "int", COUNT)})
+        await choose(events, clamp)
+
+    fire = await button("Fire", "Fire (hold)", 406.0, 12.0, 744.0, 62.0, tint=fire_tint)
+    root = await f.ref(flux, SLOT, user.id)
+    skip = await f.const(flux, "bool", True)
+    for when, event_tag, value in (("Pressed", pressed_tag, True), ("Released", released_tag, False)):
+        with_value = await f.add(flux, PF + "Actions.DynamicImpulseTriggerWithValue<bool>")
+        await f.wire(with_value, Tag=tag, TargetHierarchy=root, ExcludeDisabled=skip,
+                     Value=await f.const(flux, "bool", value))
+        edge = await f.add(flux, PF + "Actions.DynamicImpulseTrigger")
+        await f.wire(edge, Tag=event_tag, TargetHierarchy=root, ExcludeDisabled=skip, Next=with_value)
+        await f.wire(fire, **{when: edge})
+
+
+def _member_of(node, *names):
+    for name in names:
+        if name in node.members:
+            return name
+    raise LinkError(f"{node!r} has none of {names}: {sorted(node.members)}")
 
 
 def _next(write_node):

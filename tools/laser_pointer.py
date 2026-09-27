@@ -34,6 +34,7 @@ TOGGLES = "MoreFluxActions Group Toggles"
 POPUP = "MoreFluxActions Popup"
 EXAMPLES, DEVTOOL = "MoreFluxActions Examples", "FluxAction1 Dev Tool"
 POPUP_SECONDS = 2.5
+POPUP_SIZE = 0.15        # text height, m; 0.42 m ahead of the eyes
 BODY_NODE = "[Renderite.Shared]Renderite.Shared.BodyNode"
 SLOT, STR = FE + "Slot", "string"
 HANDS = (("Left", 36), ("Right", 37))
@@ -150,8 +151,8 @@ async def build(f: Flux, user, head_id, pointer_name):
     # Its text is per user: empty by default, and a write from your client (the flux runs there) sets yours alone.
     # (A slot's own fields, like its active state, can't be targeted over ResoniteLink: it gives them no IDs.)
     popup = await f.slot(head_id, POPUP)
-    text_slot = await f.slot(popup, "Text", position=(-0.13, -0.03, 0.42))
-    text = await f.add(text_slot, FE + "TextRenderer", Text="", Size=0.03, HorizontalAlign="Center",
+    text_slot = await f.slot(popup, "Text", position=(-0.05, -0.08, 0.42))
+    text = await f.add(text_slot, FE + "TextRenderer", Text="", Size=POPUP_SIZE, HorizontalAlign="Center",
                        Color=primitives.ColorX(r=1.0, g=1.0, b=1.0, a=1.0, profile="sRGB"))
     override = await f.add(popup, FE + "ValueUserOverride<string>", CreateOverrideOnWrite=True)
     await f.wire(override, Target=text.member("Text"))
