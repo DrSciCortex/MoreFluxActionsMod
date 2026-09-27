@@ -396,3 +396,6 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# Thunderstore package output (dotnet build -target:PackTS)
+/build/

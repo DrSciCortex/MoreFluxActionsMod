@@ -1,0 +1,98 @@
+<!--
+SPDX-FileCopyrightText: 2026 DrSciCortex
+
+SPDX-License-Identifier: MIT
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <Authors>DrSciCortex</Authors>
+    <TargetFramework>net10.0</TargetFramework>
+    <RepositoryUrl>https://github.com/DrSciCortex/MoreFluxActionsMod</RepositoryUrl>
+    <PackageId>DrSciCortex.MoreFluxActions</PackageId>
+    <Product>MoreFluxActions</Product>
+    <RootNamespace>MoreFluxActions</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Deterministic>true</Deterministic>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <ThunderstorePackable>true</ThunderstorePackable>
+    <GamePath Condition="'$(ResonitePath)' != ''">$(ResonitePath)/</GamePath>
+    <GamePath Condition="'$(GamePath)' == '' and Exists('$(MSBuildProgramFiles32)\Steam\steamapps\common\Resonite\')">$(MSBuildProgramFiles32)\Steam\steamapps\common\Resonite\</GamePath>
+    <GamePath Condition="'$(GamePath)' == '' and Exists('$(HOME)/.steam/steam/steamapps/common/Resonite/')">$(HOME)/.steam/steam/steamapps/common/Resonite/</GamePath>
+    <RestoreAdditionalProjectSources>
+      https://nuget-modding.resonite.net/v3/index.json;
+    </RestoreAdditionalProjectSources>
+  </PropertyGroup>
+
+  <!-- InterprocessLib, fetched from Thunderstore on the first build (ThunderstoreRefs.targets, AGPL-3.0-only) -->
+  <Import Project="..\ThunderstoreRefs.targets" />
+
+  <!-- Modding dependencies -->
+  <ItemGroup>
+    <PackageReference Include="BepInEx.ResonitePluginInfoProps" Version="3.*" />
+    <PackageReference Include="ResoniteModding.BepInExResoniteShim" Version="0.9.*" />
+    <PackageReference Include="ResoniteModding.BepisResoniteWrapper" Version="1.*" />
+  </ItemGroup>
+
+  <!-- NuGet fallback stripped game references -->
+  <ItemGroup Condition="!Exists('$(GamePath)')">
+    <PackageReference Include="Resonite.GameLibs" Version="*" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- Local game references -->
+  <ItemGroup Condition="Exists('$(GamePath)')">
+    <Reference Include="FrooxEngine">
+      <HintPath>$(GamePath)FrooxEngine.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Elements.Core">
+      <HintPath>$(GamePath)Elements.Core.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Renderite.Shared">
+      <HintPath>$(GamePath)Renderite.Shared.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="ProtoFlux.Core">
+      <HintPath>$(GamePath)ProtoFlux.Core.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="ProtoFlux.Nodes.FrooxEngine">
+      <HintPath>$(GamePath)ProtoFlux.Nodes.FrooxEngine.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- InterprocessLib (Nytra): messages from the renderer plugin. Reference only; users install the package. -->
+  <ItemGroup>
+    <Reference Include="InterprocessLib.FrooxEngine">
+      <HintPath>$(InterprocessLibFrooxEngineDll)</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- The protocol both halves share; QueueScope.cs is AGPL-3.0-only (adapted from DesktopBuddy) -->
+  <ItemGroup>
+    <Compile Include="..\Shared\FluxActionProtocol.cs" Link="Shared\FluxActionProtocol.cs" />
+    <Compile Include="..\Shared\QueueScope.cs" Link="Shared\QueueScope.cs" />
+  </ItemGroup>
+
+  <!-- dotnet build -p:Deploy=true: copy into the mod profile (Gale's Default profile if present, else the game). -->
+  <PropertyGroup>
+    <ModProfilePath Condition="'$(ModProfilePath)' == '' and Exists('$(APPDATA)\com.kesomannen.gale\resonite\profiles\Default\BepInEx')">$(APPDATA)\com.kesomannen.gale\resonite\profiles\Default\</ModProfilePath>
+    <ModProfilePath Condition="'$(ModProfilePath)' == ''">$(GamePath)</ModProfilePath>
+    <PluginTargetDir>$(ModProfilePath)BepInEx\plugins\DrSciCortex-MoreFluxActions\MoreFluxActions</PluginTargetDir>
+  </PropertyGroup>
+  <Target Name="Deploy" AfterTargets="Build" Condition="'$(Deploy)' == 'true'">
+    <ItemGroup>
+      <PluginFiles Include="$(TargetPath)" />
+      <PluginFiles Include="$(TargetDir)$(TargetName).pdb" Condition="Exists('$(TargetDir)$(TargetName).pdb')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(PluginTargetDir)" />
+    <!-- The package's icon, beside the plugin folder as a Thunderstore install has it (mod managers show it) -->
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)..\icon.png" DestinationFolder="$(PluginTargetDir)\.." />
+    <Message Text="Deployed $(TargetName) to $(PluginTargetDir)" Importance="high" />
+  </Target>
+</Project>

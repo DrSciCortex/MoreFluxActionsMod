@@ -1,0 +1,40 @@
+<!--
+SPDX-FileCopyrightText: 2026 DevL0rd (DesktopBuddy, https://github.com/DevL0rd/DesktopBuddy)
+SPDX-FileCopyrightText: 2026 DrSciCortex
+
+SPDX-License-Identifier: AGPL-3.0-only
+
+Adapted from DesktopBuddy's DesktopBuddySharedTextureBridge.csproj (AGPL-3.0): the Thunderstore packages the
+halves compile against, fetched on the first build (they aren't on NuGet). Reference only: users install the
+packages. Licensed AGPL-3.0-only like its source; the rest of MoreFluxActions is MIT (README.md, Licences).
+
+Imported by both projects. The renderer half sets ThunderstoreRefsBepInExRenderer to true for BepInEx 5 as well.
+-->
+<Project>
+  <PropertyGroup>
+    <ThunderstoreRefsPath>$(MSBuildThisFileDirectory)obj\ThunderstoreRefs</ThunderstoreRefsPath>
+    <InterprocessLibPackagePath>$(ThunderstoreRefsPath)\Nytra-InterprocessLib-3.0.0</InterprocessLibPackagePath>
+    <InterprocessLibFrooxEngineDll>$(InterprocessLibPackagePath)\plugins\InterprocessLib.BepisLoader\InterprocessLib.FrooxEngine.dll</InterprocessLibFrooxEngineDll>
+    <InterprocessLibUnityDir>$(InterprocessLibPackagePath)\Renderer\BepInEx\plugins\InterprocessLib.BepInEx\</InterprocessLibUnityDir>
+    <BepInExRendererPackagePath>$(ThunderstoreRefsPath)\ResoniteModding-BepInExRenderer-5.4.233001</BepInExRendererPackagePath>
+    <BepInExCore>$(BepInExRendererPackagePath)\BepInExPack\Renderer\BepInEx\core\</BepInExCore>
+  </PropertyGroup>
+
+  <Target Name="RestoreThunderstoreRefs" BeforeTargets="ResolveAssemblyReferences">
+    <PropertyGroup>
+      <NeedInterprocessLib Condition="!Exists('$(InterprocessLibFrooxEngineDll)') or !Exists('$(InterprocessLibUnityDir)InterprocessLib.Unity.dll')">true</NeedInterprocessLib>
+      <NeedBepInExRenderer Condition="'$(ThunderstoreRefsBepInExRenderer)' == 'true' and !Exists('$(BepInExCore)BepInEx.dll')">true</NeedBepInExRenderer>
+    </PropertyGroup>
+    <MakeDir Directories="$(ThunderstoreRefsPath)" />
+    <DownloadFile SourceUrl="https://thunderstore.io/package/download/Nytra/InterprocessLib/3.0.0/"
+                  DestinationFolder="$(ThunderstoreRefsPath)" DestinationFileName="Nytra-InterprocessLib-3.0.0.zip"
+                  Condition="'$(NeedInterprocessLib)' == 'true'" />
+    <Unzip SourceFiles="$(ThunderstoreRefsPath)\Nytra-InterprocessLib-3.0.0.zip" DestinationFolder="$(InterprocessLibPackagePath)"
+           OverwriteReadOnlyFiles="true" Condition="'$(NeedInterprocessLib)' == 'true'" />
+    <DownloadFile SourceUrl="https://thunderstore.io/package/download/ResoniteModding/BepInExRenderer/5.4.233001/"
+                  DestinationFolder="$(ThunderstoreRefsPath)" DestinationFileName="ResoniteModding-BepInExRenderer-5.4.233001.zip"
+                  Condition="'$(NeedBepInExRenderer)' == 'true'" />
+    <Unzip SourceFiles="$(ThunderstoreRefsPath)\ResoniteModding-BepInExRenderer-5.4.233001.zip" DestinationFolder="$(BepInExRendererPackagePath)"
+           OverwriteReadOnlyFiles="true" Condition="'$(NeedBepInExRenderer)' == 'true'" />
+  </Target>
+</Project>

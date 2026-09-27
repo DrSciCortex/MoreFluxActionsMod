@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="MoreFluxActions/MoreFluxActions.csproj" />
+  <Project Path="MoreFluxActions.Renderer/MoreFluxActions.Renderer.csproj" />
+</Solution>

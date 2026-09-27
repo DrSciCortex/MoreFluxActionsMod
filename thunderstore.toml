@@ -1,0 +1,49 @@
+# Thunderstore CLI package (https://github.com/thunderstore-io/thunderstore-cli):
+#   dotnet build -c Release -target:PackTS -v d        (add -property:PublishTS=true to publish)
+
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "DrSciCortex"
+name = "MoreFluxActions"
+versionNumber = "0.1.0"
+description = "Adds FluxAction1-42 to Resonite's SteamVR bindings, for any controller. Bind them to buttons and they fire ProtoFlux dynamic impulses on your avatar."
+websiteUrl = "https://github.com/DrSciCortex/MoreFluxActionsMod"
+containsNsfwContent = false
+
+[package.dependencies]
+ResoniteModding-BepisLoader = "1.6.0"
+ResoniteModding-BepisResoniteWrapper = "1.0.2"
+ResoniteModding-BepInExResoniteShim = "0.9.0"
+Nytra-InterprocessLib = "3.0.0"
+ResoniteModding-BepInExRenderer = "5.4.233001"
+ResoniteModding-RenderiteHook = "1.1.1"
+
+[build]
+icon = "./icon.png"
+readme = "./README.md"
+outdir = "./build"
+
+[[build.copy]]
+source = "./MoreFluxActions/bin/Release/MoreFluxActions.dll"
+target = "plugins/MoreFluxActions/"
+
+[[build.copy]]
+source = "./MoreFluxActions/bin/Release/MoreFluxActions.pdb"
+target = "plugins/MoreFluxActions/"
+
+[[build.copy]]
+source = "./MoreFluxActions.Renderer/bin/Release/MoreFluxActions.Renderer.dll"
+target = "Renderer/BepInEx/plugins/MoreFluxActions.Renderer/"
+
+[[build.copy]]
+source = "./CHANGELOG.md"
+target = "/"
+
+[publish]
+repository = "https://thunderstore.io"
+communities = ["resonite"]
+
+[publish.categories]
+resonite = ["mods"]

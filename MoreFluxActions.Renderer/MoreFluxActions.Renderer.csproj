@@ -1,0 +1,82 @@
+<!--
+SPDX-FileCopyrightText: 2026 DrSciCortex
+
+SPDX-License-Identifier: MIT
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The renderer half: Resonite's Unity renderer (Mono) loads it through BepInEx 5 (ResoniteModding-BepInExRenderer). -->
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>MoreFluxActions.Renderer</AssemblyName>
+    <RootNamespace>MoreFluxActions.Renderer</RootNamespace>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <Deterministic>true</Deterministic>
+    <GamePath Condition="'$(ResonitePath)' != ''">$(ResonitePath)/</GamePath>
+    <GamePath Condition="'$(GamePath)' == '' and Exists('$(MSBuildProgramFiles32)\Steam\steamapps\common\Resonite\')">$(MSBuildProgramFiles32)\Steam\steamapps\common\Resonite\</GamePath>
+    <GamePath Condition="'$(GamePath)' == '' and Exists('$(HOME)/.steam/steam/steamapps/common/Resonite/')">$(HOME)/.steam/steam/steamapps/common/Resonite/</GamePath>
+    <RendererManaged>$(GamePath)Renderer\Renderite.Renderer_Data\Managed\</RendererManaged>
+    <ThunderstoreRefsBepInExRenderer>true</ThunderstoreRefsBepInExRenderer>
+  </PropertyGroup>
+
+  <!-- InterprocessLib and BepInEx 5, fetched from Thunderstore on the first build (ThunderstoreRefs.targets,
+       AGPL-3.0-only) -->
+  <Import Project="..\ThunderstoreRefs.targets" />
+
+  <!-- BepInEx 5 + Harmony, InterprocessLib: reference only (users install those packages) -->
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.3.3" PrivateAssets="all" ExcludeAssets="runtime" />
+    <Reference Include="BepInEx">
+      <HintPath>$(BepInExCore)BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="InterprocessLib.Unity">
+      <HintPath>$(InterprocessLibUnityDir)InterprocessLib.Unity.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Unity, Valve's SteamVR plugin and Renderite, from the installed renderer: reference only, never redistributed -->
+  <ItemGroup>
+    <Reference Include="UnityEngine">
+      <HintPath>$(RendererManaged)UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(RendererManaged)UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SteamVR">
+      <HintPath>$(RendererManaged)SteamVR.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Valve.Newtonsoft.Json">
+      <HintPath>$(RendererManaged)Valve.Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Renderite.Shared">
+      <HintPath>$(RendererManaged)Renderite.Shared.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- The protocol both halves share; QueueScope.cs is AGPL-3.0-only (adapted from DesktopBuddy) -->
+  <ItemGroup>
+    <Compile Include="..\Shared\FluxActionProtocol.cs" Link="Shared\FluxActionProtocol.cs" />
+    <Compile Include="..\Shared\QueueScope.cs" Link="Shared\QueueScope.cs" />
+  </ItemGroup>
+
+  <!-- dotnet build -p:Deploy=true: copy into the mod profile's renderer (Gale's Default profile if present, else the game). -->
+  <PropertyGroup>
+    <ModProfilePath Condition="'$(ModProfilePath)' == '' and Exists('$(APPDATA)\com.kesomannen.gale\resonite\profiles\Default\Renderer\BepInEx')">$(APPDATA)\com.kesomannen.gale\resonite\profiles\Default\</ModProfilePath>
+    <ModProfilePath Condition="'$(ModProfilePath)' == ''">$(GamePath)</ModProfilePath>
+    <PluginTargetDir>$(ModProfilePath)Renderer\BepInEx\plugins\DrSciCortex-MoreFluxActions\MoreFluxActions.Renderer</PluginTargetDir>
+  </PropertyGroup>
+  <Target Name="Deploy" AfterTargets="Build" Condition="'$(Deploy)' == 'true'">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginTargetDir)" />
+    <Message Text="Deployed $(TargetName) to $(PluginTargetDir)" Importance="high" />
+  </Target>
+</Project>
