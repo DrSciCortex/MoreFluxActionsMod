@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using BepInEx;
+using BepInEx.Configuration;
 using BepInEx.Logging;
 using BepInEx.NET.Common;
 using BepInExResoniteShim;
@@ -36,10 +37,19 @@ public class Plugin : BasePlugin
     private Messenger? _messenger;
     private UdpClient? _udp;
     private readonly bool[] _logged = new bool[FluxActionProtocol.Count + 1];
+    private ConfigEntry<int> _muteAction = null!;
 
     public override void Load()
     {
         Log = base.Log;
+        // Resonite has no mute action for SteamVR, and ProtoFlux can't mute you (voice mode is read-only to it; the
+        // dash's mute lives in Userspace), so a FluxAction can be Resonite's mute here.
+        // 42 by default: FluxAction42 is the CyberFinger's right pink button (the CyberFinger bindings leave it for
+        // that), so the glove's mute button works out of the box.
+        _muteAction = Config.Bind("Mute", "MuteToggleAction", 42,
+            "A FluxAction (1-42) whose press also toggles your microphone mute in Resonite, like the dash's mute " +
+            "button (its impulses still fire). 0: none. 42 (the default) is the CyberFinger's right pink button, " +
+            "with the CyberFinger bridge's right pink on SteamVR.");
         ResoniteHooks.OnEngineReady += OnEngineReady;
         Log.LogInfo($"Plugin {PluginMetadata.GUID} is loaded!");
     }
@@ -123,6 +133,12 @@ public class Plugin : BasePlugin
         if (root == null || handler == null)
             return;
         string tag = FluxActionProtocol.ImpulseTag(action);
+        if (pressed && action == _muteAction.Value)
+        {
+            AudioSystem audio = world.Engine.AudioSystem;
+            audio.IsMuted = !audio.IsMuted;
+            Log.LogInfo($"{tag}: {(audio.IsMuted ? "muted" : "unmuted")} (MuteToggleAction)");
+        }
         int receivers = handler.TriggerDynamicImpulse(root, tag + (pressed ? ".Pressed" : ".Released"), true);
         receivers += handler.TriggerDynamicImpulseWithArgument(root, tag, true, pressed);
         if (!_logged[action])

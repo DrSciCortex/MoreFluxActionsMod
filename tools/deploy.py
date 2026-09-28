@@ -115,9 +115,12 @@ async def build_console(f: Flux, user, actions):
                        Size=20.0, HorizontalAutoSize=False, VerticalAutoSize=False, HorizontalAlign="Left",
                        VerticalAlign="Top", Color=primitives.ColorX(r=0.92, g=0.92, b=0.92, a=1.0, profile="sRGB"))
 
-    # The receivers: under the user root, where the mod fires FluxActionN (a bool: pressed or released).
-    rx_root = await f.slot(user.id, CONSOLE_RX)
-    shared = await f.slot(rx_root, "Log")
+    # Everything lives in the panel, so saving the world keeps it. The receivers must sit under a user root, where the
+    # mod fires FluxActionN (a bool: pressed or released), and a user root is new each session: the panel keeps them
+    # as an inactive template, and its installer copies it under each user's root (their own client does it) whenever
+    # it isn't there. The per-action chains in the copies write into the panel's log flux below.
+    shared = await f.slot(panel, "Log flux")
+    rx_root = await f.slot(panel, CONSOLE_RX, active=False)
 
     # The log text, read and written by the flux (a GlobalReference to Text.Content behind an ObjectValueSource).
     content = await f.add(shared, FE + f"ProtoFlux.GlobalReference<{FE}IValue<string>>")
@@ -160,8 +163,88 @@ async def build_console(f: Flux, user, actions):
         await f.wire(set_pressed, **{_next(set_pressed): append})
         await f.wire(rx, OnTriggered=set_name)
         print(f"  console: FluxAction{n} ", end="\r", flush=True)
+    await build_installer(f, panel, rx_root)
+    # The new installer's condition is already true (no copy under your root), and it acts on changes: nudge it with
+    # a stand-in copy, removed again, and check that the real one arrives.
+    nudge = await f.slot(user.id, CONSOLE_RX)
+    await asyncio.sleep(0.5)
+    fluxlink._check(await rl.remove_slot(nudge), "remove the stand-in")
+    for _ in range(20):
+        await asyncio.sleep(0.25)
+        kids = fluxlink._check(await rl.get_slot(user.id, depth=1), "get user root").data.children or []
+        if any(c.name and c.name.value == CONSOLE_RX for c in kids):
+            break
+    else:
+        raise LinkError("the installer didn't put the receivers under your user root")
     await build_simulator(f, panel, user)
-    print(f"console: panel ahead of you, {len(actions)} receivers under {user.name.value}, and a simulator")
+    print(f"console: panel ahead of you, with {len(actions)} receivers it installs under each user's root, and a "
+          "simulator. Save the world to keep it.")
+
+
+_TYPES = None
+
+
+async def resolve_type(rl, class_name, generic=None):
+    """A ProtoFlux node type by its class name (FindChildByName, IsNull …), from the session's own type list: node
+    namespaces vary, and ResoniteLink has no search. generic: the type argument for a generic node."""
+    global _TYPES
+    if _TYPES is None:
+        _TYPES = []
+
+        async def walk(path):
+            r = fluxlink._check(await rl.get_component_type_list(path), f"list {path}")
+            _TYPES.extend(r.componentTypes or [])
+            for sub in r.subcategories or []:
+                await walk(path.rstrip("/") + "/" + sub)
+
+        await walk("/ProtoFlux")
+    want = "." + class_name + ("<>" if generic else "")
+    hits = [t for t in _TYPES if t.endswith(want)]
+    if not hits:
+        raise LinkError(f"no ProtoFlux node {class_name} in this Resonite")
+    return hits[0][:-2] + f"<{generic}>" if generic else hits[0]
+
+
+async def build_installer(f: Flux, panel, template):
+    """Copies the receivers template under the local user's root whenever it isn't there: on joining the world,
+    after a reload, on every client for its own user (FireOnLocalTrue)."""
+    rl = f.rl
+    s = await f.slot(panel, "Installer")
+    root = await f.add(s, await resolve_type(rl, "LocalUserSlot"))
+    found = await f.add(s, await resolve_type(rl, "FindChildByName"))
+    await f.wire(found, **{_member_of(found, "Instance", "Slot", "Root"): root,
+                           _member_of(found, "Name"): await f.const(s, STR, CONSOLE_RX)})
+    has_root = await f.add(s, await resolve_type(rl, "NotNull", SLOT))
+    await f.wire(has_root, **{_only_input(has_root): root})
+    none_yet = await f.add(s, await resolve_type(rl, "IsNull", SLOT))
+    await f.wire(none_yet, **{_only_input(none_yet): found})
+    missing = await f.add(s, PF + "Operators.AND_Bool")
+    await f.wire(missing, A=has_root, B=none_yet)
+
+    template_ref = await f.ref(s, SLOT, template)
+    yes = await f.const(s, "bool", True)
+    on = await f.add(s, PF + "FrooxEngine.Slots.SetSlotActiveSelf")
+    copy = await f.add(s, await resolve_type(rl, "DuplicateSlot"))
+    await f.wire(on, Instance=copy.out(_member_of(copy, "Duplicate", "Result", "Slot")), Active=yes)
+    park = await f.add(s, PF + "FrooxEngine.Slots.SetParent")
+    await f.wire(park, Instance=copy.out(_member_of(copy, "Duplicate", "Result", "Slot")), NewParent=root,
+                 PreserveGlobalPosition=await f.const(s, "bool", False), Next=on)
+    await f.wire(copy, **{_member_of(copy, "Template", "Source", "Instance"): template_ref,
+                          _member_of(copy, "Next", "OnDuplicated"): park})
+    fire = await f.add(s, await resolve_type(rl, "FireOnLocalTrue"))
+    await f.wire(fire, **{_member_of(fire, "Condition", "Value"): missing,
+                          _member_of(fire, "OnChange", "OnTrue", "Next", "Trigger"): copy})
+    # FireOnLocalTrue fires on a change to true only. When the world loads, the user root usually appears after the
+    # panel, which is such a change; if it's there first, the condition starts true and never changes. So also: 3 s
+    # after the panel starts on a client, install if it's still missing.
+    check = await f.add(s, PF + "If")
+    await f.wire(check, Condition=missing, OnTrue=copy)
+    wait = await f.add(s, PF + "DelaySecondsFloat")
+    await f.wire(wait, Duration=await f.const(s, "float", 3.0), Next=check)
+    later = await f.add(s, PF + "FrooxEngine.Async.StartAsyncTask")
+    await f.wire(later, TaskStart=wait)
+    start = await f.add(s, await resolve_type(rl, "OnStart"))
+    await f.wire(start, Trigger=later)
 
 
 SIMULATOR_PRESETS = (1, 2, 36, 37, 38, 39, 40, 41)   # the ones the CyberFinger defaults bind
@@ -251,7 +334,8 @@ async def build_simulator(f: Flux, panel, user):
         await choose(events, clamp)
 
     fire = await button("Fire", "Fire (hold)", 406.0, 12.0, 744.0, 62.0, tint=fire_tint)
-    root = await f.ref(flux, SLOT, user.id)
+    # The local user's root, whoever presses Fire (a fixed slot would be gone after a reload).
+    root = await f.add(flux, await resolve_type(f.rl, "LocalUserSlot"))
     skip = await f.const(flux, "bool", True)
     for when, event_tag, value in (("Pressed", pressed_tag, True), ("Released", released_tag, False)):
         with_value = await f.add(flux, PF + "Actions.DynamicImpulseTriggerWithValue<bool>")

@@ -16,7 +16,8 @@ in the world you're focused on:
 | `FluxActionN` | Dynamic Impulse Receiver With Value `<bool>` | both: `true` down, `false` up |
 
 Put receivers **anywhere under your avatar** and keep their slots **active**. That's all.
-[architecture.md](architecture.md) explains why.
+[architecture.md](architecture.md) explains why, and
+[What survives a reload](#what-survives-a-reload-and-how-to-reconnect) covers receivers that live anywhere else.
 
 ## 1. Pick an action and bind it
 
@@ -151,6 +152,49 @@ object's builder then listens for that tag.
 **Waiting.** A receiver's chain is synchronous. For delays, sounds that play to the end and other async nodes,
 go through **Start Async Task** first.
 
+## What survives a reload, and how to reconnect
+
+The mod fires into your **user root**, and Resonite builds a new user root every time you join a world or it
+reloads. So where your receivers live decides whether they're still listening next time.
+
+| Where the flux lives | Survives | What it needs |
+|---|---|---|
+| **Under your avatar**, and the avatar saved | Every world and session, while you wear that avatar | Nothing: the avatar comes back under your new user root. Examples: the Dev Tool and fly examples, the avatar laser. |
+| **Under your user root**, built in the session (ResoniteLink rigs, things you dropped there) | Until you leave the world or it reloads | Nothing brings it back: build it again, or move it onto your avatar or into a world object with an installer |
+| **In a world object** that listens itself (a console, a control panel), the world saved | With the world | **An installer**, because receivers in the world never hear the impulses. See below. Example: the console. |
+| **In a world object driven from your avatar** (a door, a slide show) | With the world | No installer: receivers on your avatar forward the press with a Dynamic Impulse Trigger, finding the object when you press (by tag or name) |
+| **In Userspace** (the dash) | — | Out of reach: the impulses only fire in the focused world. Resonite's own mute, which lives there, is why the mod has `MuteToggleAction`. |
+
+**The installer.** Keep the receivers in the object as an **inactive template** named, say, `My Receivers`. Beside
+it, on every client, for its own user:
+
+```
+missing := NotNull(LocalUserSlot) AND IsNull(FindChildByName(LocalUserSlot, "My Receivers"))
+install := DuplicateSlot (the template) ─► SetParent (the copy, LocalUserSlot) ─► SetSlotActiveSelf (the copy, true)
+
+FireOnLocalTrue (missing) ─OnChange─► install
+OnStart ─► Start Async Task ─► Delay 3 s ─► If (missing) ─► install
+```
+
+`FireOnLocalTrue` fires on a *change* to true: when your user root appears after the object loads, or when the copy
+goes missing. If the condition is already true when the node starts (your root was there first, or you just
+built it), it never changes, so the `OnStart` branch installs anyway, a few seconds after the object starts on your
+client. A script that builds the installer can also nudge it: create a stand-in slot with the template's name
+under your user root, then remove it (`deploy.py` does, then checks that the real copy arrived). Everyone in the world with the mod gets
+their own copy, installed by their own client, so the object hears all of them. The copies' chains can call back
+into the object (a log, a store): a duplicate keeps its references to things outside itself. Name the template
+uniquely, so the check finds the copy and doesn't install it twice.
+
+**References that go stale.** A reference stored at build time only lasts as long as its target:
+
+- **Your user root, or anything under it:** gone next session. Look it up when it's needed: `LocalUserSlot`,
+  `LocalUser`. The console's simulator fires at the presser's `LocalUserSlot` for this reason.
+- **A world object, from your avatar:** only exists in that world. Find it at press time (`FindChildByTag`, a
+  dynamic variable) and do nothing when it isn't there.
+- **Your bones:** find them at press time with `BodyNodeSlot` (the avatar laser does), and the flux keeps working
+  on another avatar or after a rig change.
+- **Anything inside the same avatar, or the same saved object:** safe. The reference is saved with it.
+
 ## Testing and debugging
 
 - **The console:** `python tools\deploy.py console` logs every press and release it receives. A line appears but
@@ -192,6 +236,7 @@ Always send the release too. Receivers of the `bool` form, and anything "while h
 |---|---|
 | The console shows the press, your receiver doesn't fire | Tag typo (exact, case-sensitive), receiver not under your user root, or its slot inactive |
 | Works in one world, not another | The flux was built in the world but not saved on the avatar, or the world denies the action (locomotion, tools, permissions) |
+| Worked until you rejoined or the world reloaded | The receivers were under your user root (rebuilt each session), or a reference points at the old one: see [What survives a reload](#what-survives-a-reload-and-how-to-reconnect) |
 | A wire "didn't take" | Wrong kind of node on that input: `Value*` for a string, a `ValueObjectInput` for a Tag, a sync node after an async one |
 | Other users don't see the effect | Impulses run on your client only. Change something synced (a field, a slot's active state), not a local-only value |
 | Nothing from SteamVR, UDP works | Resonite isn't the focused VR app, or the button isn't bound in the Flux Actions set |

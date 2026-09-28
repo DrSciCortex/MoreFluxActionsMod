@@ -58,6 +58,16 @@ s.sendto(b"FluxAction42.Released", ("127.0.0.1", 42042))
 
 The mod listens on the loopback address only, so nothing on your network can reach it; any program on your PC can.
 
+## A FluxAction as your mute
+
+Resonite has no mute action a controller can be bound to, and ProtoFlux can't mute you (it can read a voice mode,
+not set one; the dash's mute lives in Userspace, out of a world's reach). So the mod can do it:
+**`MuteToggleAction`** (in the mod's config, `[Mute]`; 42 by default) names a FluxAction whose press also toggles
+your microphone mute, exactly like the dash's mute button. Its impulses still fire, so your own flux can show the
+state. 42 is the CyberFinger's right pink button (with the CyberFinger bridge's right pink on *SteamVR*, its
+default), so the glove's mute button works out of the box; the log shows `FluxAction42: muted` / `unmuted` on each
+press. If you bind FluxAction42 to something else, set `MuteToggleAction` to 0 (off) or another action.
+
 ## Test rigs
 
 [`tools/deploy.py`](tools/README.md) builds a FluxAction console, a Dev Tool on FluxAction1 and a fly toggle on
