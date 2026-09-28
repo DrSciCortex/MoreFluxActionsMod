@@ -254,7 +254,7 @@ async def build_simulator(f: Flux, panel, user):
     """The console's bottom rows: pick a FluxAction (presets, or - and +), and hold Fire. Fire fires what the mod
     fires for a real button, where it fires it (your user root, inactive slots skipped): FluxActionN.Pressed and
     FluxActionN(true) on press, FluxActionN.Released and FluxActionN(false) on release. So whatever a rig does
-    downstream can be checked without the glove or its gestures in the loop."""
+    downstream can be checked without the CyberFinger or its gestures in the loop."""
     white = primitives.ColorX(r=0.92, g=0.92, b=0.92, a=1.0, profile="sRGB")
     key = primitives.ColorX(r=0.18, g=0.18, b=0.24, a=1.0, profile="sRGB")
     fire_tint = primitives.ColorX(r=0.55, g=0.08, b=0.32, a=1.0, profile="sRGB")

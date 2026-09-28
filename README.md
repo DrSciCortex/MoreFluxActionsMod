@@ -6,7 +6,7 @@ A [Resonite](https://resonite.com/) mod that adds **FluxAction1 to FluxAction42*
 Bind them to any button of any controller in SteamVR, and each press and release fires a ProtoFlux dynamic impulse
 on your avatar, so your own ProtoFlux can react to buttons Resonite doesn't use.
 
-Made as the companion of the [CyberFinger](https://github.com/SciCortex/CyberFinger_SteamVR) glove, whose SteamVR
+Made as the companion of [CyberFinger](https://github.com/SciCortex/CyberFinger_SteamVR), whose SteamVR
 defaults for Resonite bind the black wrist button's long press to FluxAction1 (left hand) and FluxAction2 (right
 hand), C/D/E to FluxAction3–8, the two-finger point gesture to FluxAction36/37 and the pinky pinch and index point
 gestures to FluxAction38–41. It works with any SteamVR controller.
@@ -47,7 +47,7 @@ Actions** tab before picking a Flux Action for a button.
 
 Programs on the same PC can fire the actions without SteamVR: send one UDP datagram to `127.0.0.1:42042` per change,
 whose text is the impulse's tag, `FluxAction42.Pressed` or `FluxAction42.Released` (ASCII). The CyberFinger bridge
-does this for the right glove's pink button when it's set to a FluxAction. From Python:
+does this for the right CyberFinger's pink button when it's set to a FluxAction. From Python:
 
 ```python
 import socket
@@ -65,7 +65,7 @@ not set one; the dash's mute lives in Userspace, out of a world's reach). So the
 **`MuteToggleAction`** (in the mod's config, `[Mute]`; 42 by default) names a FluxAction whose press also toggles
 your microphone mute, exactly like the dash's mute button. Its impulses still fire, so your own flux can show the
 state. 42 is the CyberFinger's right pink button (with the CyberFinger bridge's right pink on *SteamVR*, its
-default), so the glove's mute button works out of the box; the log shows `FluxAction42: muted` / `unmuted` on each
+default), so the CyberFinger's mute button works out of the box; the log shows `FluxAction42: muted` / `unmuted` on each
 press. If you bind FluxAction42 to something else, set `MuteToggleAction` to 0 (off) or another action.
 
 ## Test rigs

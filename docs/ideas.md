@@ -28,7 +28,7 @@ combo, forwarding to a world object) are in [developing.md](developing.md#patter
   [`toggle_slot.py`](../tools/toggle_slot.py) and no ProtoFlux writing at all. Or cycle through outfits on one
   button.
 - **Facial expressions.** Hold for a smile, a blink or a pout, by driving blend shapes from the button's bool.
-  With a CyberFinger, the glove's own finger tracking stays free for your hands.
+  With a CyberFinger, its own finger tracking stays free for your hands.
 - **Emotes.** Play an animation or a particle burst: confetti, hearts, a thought bubble.
 - **On-air light.** Set the bridge's right pink button to a FluxAction, and let it toggle a light on your avatar.
 - **Size.** Toggle between two scales (Set User Scale) for crowded rooms and big builds.
@@ -58,7 +58,7 @@ combo, forwarding to a world object) are in [developing.md](developing.md#patter
 
 ## Accessibility
 
-- **One-handed control.** Put the gestures and menus you'd otherwise need two hands for on one glove.
+- **One-handed control.** Put the gestures and menus you'd otherwise need two hands for on one CyberFinger.
 - **Big, simple toggles.** Combine the hold pattern with a large on-screen label, for players who find small UI
   hard.
 - **Reduce motion.** Switch to teleport, fade the vignette in, or dim bright effects.
@@ -68,7 +68,7 @@ combo, forwarding to a world object) are in [developing.md](developing.md#patter
 
 - **Event markers.** Stamp trials, stimuli or observations with a timestamp, like the
   [console](examples.md#the-console). Its log is a working example of a timestamped record.
-- **Stimulus control.** Start a trial, present a stimulus, and advance a protocol from a glove the participant
+- **Stimulus control.** Start a trial, present a stimulus, and advance a protocol from a CyberFinger the participant
   already wears.
 - **Annotate a dataset.** Walk through a 3D reconstruction or volume, and mark points of interest with a press.
 - **External rigs.** A lab program (a stimulus PC, an EEG recorder, a tracker) can fire FluxActions over UDP, so

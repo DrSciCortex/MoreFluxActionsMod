@@ -25,13 +25,13 @@ Put receivers **anywhere under your avatar** and keep their slots **active**. Th
   sets are the tabs along the top. Switch to **Flux Actions**, then click a button and pick Flux Action 1–42 (an
   input's list only shows the selected tab's actions). It's read alongside Resonite's own actions, whatever
   controller you use.
-- **CyberFinger:** each glove has an extra input, **A held**, which turns on after the black wrist button has
+- **CyberFinger:** each CyberFinger has an extra input, **A held**, which turns on after the black wrist button has
   been held for 0.8 s (the driver's `black_hold_ms`). The default Resonite binding uses these, left then right:
 
   | Input | Flux Actions |
   |---|---|
   | A held (black button, held) | 1, 2 |
-  | C / D / E (on gloves that have them) | 3, 4 / 5, 6 / 7, 8 |
+  | C / D / E (on CyberFingers that have them) | 3, 4 / 5, 6 / 7, 8 |
   | Two-finger point (hand tracking: index and middle out, the thumb over the others) | 36, 37 |
   | Thumb-pinky pinch (hand tracking) | 38, 39 |
   | Index point (hand tracking) | 40, 41 |
@@ -134,7 +134,7 @@ Generic arguments are bare for primitives (`<bool>`, `<string>`) and assembly-qu
 enabled). This is `toggle_slot.py --hold`. It's also the way to make a push-to-talk, a sprint, or a "show my
 menu while I hold".
 
-**Different actions for tap and hold.** On a CyberFinger the black button already does this: the glove gives a
+**Different actions for tap and hold.** On a CyberFinger the black button already does this: it gives a
 tap to Resonite and a hold to FluxAction1/2. For other buttons, time it in flux: `Pressed` stores the time,
 `Released` compares against it and branches.
 

@@ -45,7 +45,7 @@ public class Plugin : BasePlugin
         // Resonite has no mute action for SteamVR, and ProtoFlux can't mute you (voice mode is read-only to it; the
         // dash's mute lives in Userspace), so a FluxAction can be Resonite's mute here.
         // 42 by default: FluxAction42 is the CyberFinger's right pink button (the CyberFinger bindings leave it for
-        // that), so the glove's mute button works out of the box.
+        // that), so the CyberFinger's mute button works out of the box.
         _muteAction = Config.Bind("Mute", "MuteToggleAction", 42,
             "A FluxAction (1-42) whose press also toggles your microphone mute in Resonite, like the dash's mute " +
             "button (its impulses still fire). 0: none. 42 (the default) is the CyberFinger's right pink button, " +
