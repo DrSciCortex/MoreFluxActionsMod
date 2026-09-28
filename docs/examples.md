@@ -104,16 +104,20 @@ Modules are matched by a part of their name: Resonite's names are locale keys su
 ## The avatar laser
 
 [`tools/avatar_laser.py`](../tools/avatar_laser.py) builds a laser pointer into your avatar. Hold the two-finger
-point (FluxAction36 left, 37 right) and a green beam leaves that index finger, ending in a dot where it hits.
-Your dial gets a **Laser: on/off** item that switches the gesture.
+point (FluxAction36 left, 37 right) and a green beam leaves that index finger, aimed by the back of your hand,
+ending in a dot where it hits.
+Each hand's dial gets a **Laser: on/off** item that switches that hand's laser.
 
-- **The gesture's flux** runs on your client (the impulse only fires there). It finds the index finger's bones
-  with `BodyNodeSlot` at each press, moves the beam onto the end bone aimed along the finger, and switches it
-  on or off.
+- **The gesture's flux** runs on your client (the impulse only fires there). At each press it finds the hand
+  and index finger bones with `BodyNodeSlot`, and puts the beam on the **hand** bone, at the fingertip, aimed from
+  the wrist to the index knuckle, turned 40° toward the little finger in the plane of the back of the hand (that
+  line leans toward the thumb side of where the finger points; `--yaw` sets the angle for another avatar). Then it switches the beam on or off. The hand follows the controller's pose (a
+  CyberFinger's is IMU-fused), so the beam is steadier than one riding the finger, which carries the finger
+  tracking's jitter.
 - **The beam's length and dot** come from a `Raycaster` feeding drives, which every client evaluates for itself,
   so nothing is sent while you point.
-- **The dial item** is a `RootContextMenuItem` with a `ButtonToggle` on an enabled flag, which a driver turns
-  into the item's label and colour.
+- **The dial items** are a `RootContextMenuItem` per hand (`OnlyForSide`, so each shows in its own hand's dial),
+  each with a `ButtonToggle` on that hand's enabled flag, which drivers turn into the item's label and colour.
 
 It all lives on the avatar, and it looks up your bones and user at press time. Save the avatar and it works in
 every world and every session, with nothing to reconnect.
